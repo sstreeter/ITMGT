@@ -6,24 +6,40 @@ import sys
 
 ENV_FILE = ".env"
 
-# A small list of friendly words for memorable keys
-WORD_LIST = [
+# A small fallback list of friendly words
+FALLBACK_WORDS = [
     "correct", "horse", "battery", "staple", "purple", "monkey", "dishwasher",
     "galaxy", "pizza", "noodle", "audit", "secure", "server", "linux", "power",
     "shell", "biology", "utah", "admin", "coffee", "bacon", "cheese", "dragon",
     "ninja", "wizard", "rocket", "laser", "turbo", "hyper", "mega", "ultra"
 ]
 
+def get_word_list():
+    # Try to load from system dictionary for variety
+    system_dict = "/usr/share/dict/words"
+    if os.path.exists(system_dict):
+        try:
+            with open(system_dict, "r") as f:
+                # Filter for reasonable length, lowercase, no punctuation
+                words = [w.strip().lower() for w in f if 3 < len(w.strip()) < 9 and w.strip().isalpha()]
+            if len(words) > 1000:
+                return words
+        except Exception:
+            pass # Fail silently using fallback
+    
+    return FALLBACK_WORDS
+
 def generate_hex_key():
     return secrets.token_hex(32)
 
 def generate_memorable_key():
-    # Pick 5 random words
-    words = [secrets.choice(WORD_LIST) for _ in range(5)]
+    words = get_word_list()
+    # Pick 4 random words (5 was getting long with bigger dictionary words)
+    picked_words = [secrets.choice(words) for _ in range(4)]
     # Add a random number for good measure
     number = secrets.randbelow(1000)
     # Capitalize and join
-    key = "-".join(w.capitalize() for w in words) + f"-{number}"
+    key = "-".join(w.capitalize() for w in picked_words) + f"-{number}"
     return key
 
 def save_key(new_key):
