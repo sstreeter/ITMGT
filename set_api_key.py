@@ -137,8 +137,8 @@ def main():
             
             print("\nOptions:")
             print(" [y] Accept this key")
-            print(" [n] New (Roll unlocked words)")
-            print(" [l] Lock/Unlock words (e.g. 'l 1 3' locks/unlocks word 1 & 3)")
+            print(" [n] New (Roll all unlocked words)")
+            print(" [l] Lock/Unlock words (e.g., 'l 1 3' toggles words 1 & 3)")
             print(" [h] History")
             print(" [q] Quit")
             
