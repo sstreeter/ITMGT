@@ -1,0 +1,4 @@
+{
+    "ServerUrl": "https://sbs-inventory.school.internal:443",
+    "ApiKey": "CHANGE_ME_TO_YOUR_SECRET_KEY"
+}
