@@ -1,11 +1,29 @@
 #!/usr/bin/env python3
 import secrets
 import os
+import random
 
 ENV_FILE = ".env"
 
-def generate_key():
+# A small list of friendly words for memorable keys
+WORD_LIST = [
+    "correct", "horse", "battery", "staple", "purple", "monkey", "dishwasher",
+    "galaxy", "pizza", "noodle", "audit", "secure", "server", "linux", "power",
+    "shell", "biology", "utah", "admin", "coffee", "bacon", "cheese", "dragon",
+    "ninja", "wizard", "rocket", "laser", "turbo", "hyper", "mega", "ultra"
+]
+
+def generate_hex_key():
     return secrets.token_hex(32)
+
+def generate_memorable_key():
+    # Pick 5 random words
+    words = [secrets.choice(WORD_LIST) for _ in range(5)]
+    # Add a random number for good measure
+    number = secrets.randbelow(1000)
+    # Capitalize and join
+    key = "-".join(w.capitalize() for w in words) + f"-{number}"
+    return key
 
 def main():
     if os.path.exists(ENV_FILE):
@@ -19,7 +37,15 @@ def main():
                     print("Aborted.")
                     return
 
-    new_key = generate_key()
+    print("\nChoose your key style:")
+    print("1. Random Hex (e.g., 7f8e9d...) [Maximum Security]")
+    print("2. Memorable Words (e.g., Purple-Monkey-Dishwasher-42) [Easier to type]")
+    style = input("Selection [1/2]: ").strip()
+
+    if style == "2":
+        new_key = generate_memorable_key()
+    else:
+        new_key = generate_hex_key()
     
     # Read existing content or start fresh
     if os.path.exists(ENV_FILE):
