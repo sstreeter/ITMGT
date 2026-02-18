@@ -41,24 +41,38 @@ ALL_WORDS = [word for category in THEMES.values() for word in category]
 def generate_hex_key():
     return secrets.token_hex(32)
 
-def generate_themed_key(locked_words=None):
+def generate_themed_key(count=4, locked_words=None):
     if locked_words is None:
         locked_words = {} # Dict of index -> word
         
     words = []
-    # We want 4 words total
-    for i in range(4):
+    for i in range(count):
         if i in locked_words:
             words.append(locked_words[i])
         else:
-            # Pick a random word from ALL_WORDS
             words.append(secrets.choice(ALL_WORDS))
+    return words
+
+def format_key(words, casing="sentence"):
+    # Apply casing
+    formatted_words = []
+    for w in words:
+        if casing == "sentence":
+            formatted_words.append(w.capitalize())
+        elif casing == "lower":
+            formatted_words.append(w.lower())
+        elif casing == "upper":
+            formatted_words.append(w.upper())
+        elif casing == "random":
+            formatted_words.append(secrets.choice([w.upper(), w.lower(), w.capitalize()]))
             
-    # Add a random number for good measure
+    # Add number suffix? Maybe optional. For now, keep it for uniqueness.
+    # But user asked for customization. Let's make it simple: 
+    # Just words joined by dashes, maybe append number if not manually edited.
+    # Actually, let's keep the number standard for entropy, but user can edit it out.
     number = secrets.randbelow(1000)
-    # Capitalize and join
-    key_str = "-".join(w.capitalize() for w in words) + f"-{number}"
-    return key_str, words
+    key_str = "-".join(formatted_words) + f"-{number}"
+    return key_str
 
 def save_key(new_key):
     # Read existing content or start fresh
@@ -66,21 +80,17 @@ def save_key(new_key):
         with open(ENV_FILE, "r") as f:
             lines = f.readlines()
     else:
-        # Try to copy from example if it exists
         if os.path.exists(".env.example"):
             with open(".env.example", "r") as f:
                 lines = f.readlines()
         else:
             lines = []
 
-    # Filter out any existing key line
     lines = [line for line in lines if not line.strip().startswith("SBS_API_KEY=")]
     
-    # Check if file ends with newline
     if lines and not lines[-1].endswith('\n'):
         lines[-1] += '\n'
         
-    # Append new key
     lines.append(f"SBS_API_KEY={new_key}\n")
 
     with open(ENV_FILE, "w") as f:
@@ -98,7 +108,6 @@ def main():
             content = f.read()
             if "SBS_API_KEY=" in content and "change-me" not in content:
                 print("A secure key appears to be set already.")
-                # We assume manual run means we might want to overwrite or verify
                 choice = input("Do you want to overwrite it? (y/N): ")
                 if choice.lower() != 'y':
                     print("Aborted.")
@@ -106,16 +115,21 @@ def main():
 
     print("\nChoose your key style:")
     print("1. Random Hex (e.g., 7f8e9d...) [Maximum Security]")
-    print("2. Themed Words (e.g., Dragon-Laser-Biology-42) [Fun & Memorable]")
+    print("2. Themed Words (e.g., Dragon-Laser-Biology-42) [Customizable]")
     style = input("Selection [1/2]: ").strip()
     
     key_history = []
-    current_words = [] # List of strings
-    locked_indices = {} # Map index -> word
     
-    # Initial generation
+    # Defaults
+    current_count = 4
+    current_casing = "sentence"
+    current_words = []
+    locked_indices = {}
+    
+    # Init
     if style == "2":
-        new_key_str, current_words = generate_themed_key(locked_indices)
+        current_words = generate_themed_key(current_count, locked_indices)
+        new_key_str = format_key(current_words, current_casing)
     else:
         new_key_str = generate_hex_key()
         current_words = []
@@ -125,20 +139,24 @@ def main():
         if len(key_history) > 100:
             key_history.pop(0)
 
-        print(f"\nGenerated Key: \033[92m{new_key_str}\033[0m")
+        print(f"\nGenerared Key: \033[92m{new_key_str}\033[0m")
         
         if style == "2":
-            # UX for Locking
+            # UX for Themed
+            print(f"Details: {current_count} words | Case: {current_casing}")
             print("Current Words: ", end="")
             for i, w in enumerate(current_words):
-                status = " [LOCKED]" if i in locked_indices else ""
-                print(f"{i+1}. {w.capitalize()}{status}  ", end="")
+                status = " 🔒" if i in locked_indices else ""
+                print(f"{i+1}.{w}{status}  ", end="")
             print("")
             
             print("\nOptions:")
-            print(" [y] Accept this key")
-            print(" [n] New (Roll all unlocked words)")
-            print(" [l] Lock/Unlock words (e.g., 'l 1 3' toggles words 1 & 3)")
+            print(" [y] Accept")
+            print(" [n] New roll (respects locks)")
+            print(" [l] Lock/Unlock (e.g. 'l 1 3')")
+            print(" [c] Count (change # of words)")
+            print(" [s] Style (upper, lower, sentence, random)")
+            print(" [e] Edit manually")
             print(" [h] History")
             print(" [q] Quit")
             
@@ -148,8 +166,8 @@ def main():
                 save_key(new_key_str)
                 sys.exit(0)
             elif choice == 'n':
-                # Generate new key respecting locks
-                new_key_str, current_words = generate_themed_key(locked_indices)
+                current_words = generate_themed_key(current_count, locked_indices)
+                new_key_str = format_key(current_words, current_casing)
                 continue
             elif choice.startswith('l'):
                 parts = choice.split()
@@ -157,34 +175,51 @@ def main():
                     for p in parts[1:]:
                         try:
                             idx = int(p) - 1
-                            if 0 <= idx < 4:
+                            if 0 <= idx < current_count:
                                 if idx in locked_indices:
                                     del locked_indices[idx]
                                 else:
                                     locked_indices[idx] = current_words[idx]
                         except ValueError:
                             pass
-                    # Regenerate immediately to show effect?
-                    # Or just redisplay? Users expect immediate feedback.
-                    # Let's regenerate immediately for the UNLOCKED slots to show progress?
-                    # Or just redisplay the current key with LOCK status updated.
-                    # Better UX: Redistplay current key with [LOCKED] status updated, wait for 'n' to roll.
-                    # But if we just 'continue', we'll re-append the SAME key to history?
-                    # Let's just create a 'dirty' flag or just re-loop without generating?
-                    # The top of loop doesn't generate. We generate inside the 'n' block or init.
-                    # Wait, the structure was slightly off.
-                    # Refactoring loop structure below.
-                    pass 
-                
-                # Logic Fix: Don't generate new key here, just update display
-                # We need to restructure loop to separate Display from Generation
-                continue 
-
+                continue
+            elif choice == 'c':
+                try:
+                    new_c = int(input("Enter new word count (3-10): "))
+                    if 3 <= new_c <= 10:
+                        current_count = new_c
+                        # Reset locks that are out of bounds
+                        locked_indices = {i: w for i, w in locked_indices.items() if i < current_count}
+                        # Regenerate to fit new count
+                        current_words = generate_themed_key(current_count, locked_indices)
+                        new_key_str = format_key(current_words, current_casing)
+                except ValueError:
+                    print("Invalid number.")
+                continue
+            elif choice == 's':
+                print("Styles: [u]pper, [l]ower, [s]entence, [r]andom")
+                s = input("Select style: ").strip().lower()
+                if s.startswith('u'): current_casing = "upper"
+                elif s.startswith('l'): current_casing = "lower"
+                elif s.startswith('s'): current_casing = "sentence"
+                elif s.startswith('r'): current_casing = "random"
+                new_key_str = format_key(current_words, current_casing)
+                continue
+            elif choice == 'e':
+                print(f"Current: {new_key_str}")
+                edited = input("Edit:    ").strip()
+                if edited:
+                    new_key_str = edited
+                    # Note: Editing breaks the word tracking/locking loop usually, 
+                    # but we can just treat it as a final override.
+                    # We'll put it in history.
+                    # If they continue 'n', it discards edits and rolls fresh.
+                    pass
+                continue
             elif choice == 'h':
-                # ... same history logic ...
+                # History...
                 if len(key_history) > 1:
                     print("\n--- Key History ---")
-                    # Show last 10 for brevity?
                     start_idx = max(0, len(key_history) - 10)
                     for i in range(start_idx, len(key_history)):
                         print(f"{i+1}. {key_history[i]}")
@@ -197,11 +232,10 @@ def main():
                         pass
                 continue
             elif choice == 'q':
-                print("Aborted.")
                 sys.exit(0)
 
         else:
-            # Hex Style Simple Loop
+            # Hex Loop
             print("\nOptions: [y]es, [n]ext, [h]istory, [q]uit")
             choice = input("Choice: ").strip().lower()
             if choice == 'y':
@@ -211,7 +245,7 @@ def main():
                 new_key_str = generate_hex_key()
                 continue
             elif choice == 'h':
-                 if len(key_history) > 1:
+                if len(key_history) > 1:
                     print("\n--- Key History ---")
                     for i, k in enumerate(key_history):
                         print(f"{i+1}. {k}")
@@ -222,7 +256,7 @@ def main():
                             sys.exit(0)
                     except ValueError:
                         pass
-                 continue
+                continue
             elif choice == 'q':
                 sys.exit(0)
 
