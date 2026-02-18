@@ -75,9 +75,13 @@ def format_key(words, casing="sentence"):
     return key_str
 
 def save_key(new_key):
+    # Determine absolute path to .env in the script's directory
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    env_path = os.path.join(script_dir, ENV_FILE)
+    
     # Read existing content or start fresh
-    if os.path.exists(ENV_FILE):
-        with open(ENV_FILE, "r") as f:
+    if os.path.exists(env_path):
+        with open(env_path, "r") as f:
             lines = f.readlines()
     else:
         if os.path.exists(".env.example"):
@@ -93,19 +97,22 @@ def save_key(new_key):
         
     lines.append(f"SBS_API_KEY={new_key}\n")
 
-    with open(ENV_FILE, "w") as f:
+    with open(env_path, "w") as f:
         f.writelines(lines)
 
-    print(f"\nSUCCESS! New API Key generated and saved to {ENV_FILE}")
+    print(f"\nSUCCESS! New API Key generated and saved to {env_path}")
     print(f"Key: {new_key}")
     print("\nIMPORTANT: You must update your client's 'config.json' file with this key:")
     print(f'   "ApiKey": "{new_key}"')
 
 def main():
     print(f"--- ITMGT Key Generator ---")
-    if os.path.exists(ENV_FILE):
-        print(f"Checking {ENV_FILE}...")
-        with open(ENV_FILE, "r") as f:
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    env_path = os.path.join(script_dir, ENV_FILE)
+    
+    if os.path.exists(env_path):
+        print(f"Checking {env_path}...")
+        with open(env_path, "r") as f:
             content = f.read()
             if "SBS_API_KEY=" in content and "change-me" not in content:
                 print("A secure key appears to be set already.")
