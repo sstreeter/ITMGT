@@ -98,7 +98,8 @@ def save_key(new_key):
 
     print(f"\nSUCCESS! New API Key generated and saved to {ENV_FILE}")
     print(f"Key: {new_key}")
-    print("\nIMPORTANT: Copy this key to your client's config.json file!")
+    print("\nIMPORTANT: You must update your client's 'config.json' file with this key:")
+    print(f'   "ApiKey": "{new_key}"')
 
 def main():
     print(f"--- ITMGT Key Generator ---")
