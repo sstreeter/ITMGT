@@ -85,12 +85,12 @@ We need to set the secret password that clients use to talk to the server.
     ```bash
     sudo cp .env.example .env
     ```
-2.  Edit the file:
+2.  **Generate a Secure Key**:
+    We included a script to do this for you!
     ```bash
-    sudo nano .env
+    sudo python3 set_api_key.py
     ```
-3.  Change `SBS_API_KEY` to a random secret string (e.g., `purple-monkey-dishwasher-99`).
-4.  Save and exit (`Ctrl+O` -> Enter, then `Ctrl+X`).
+    *It will print the new key. **Copy this key** because you will need it for the Windows clients!*
 
 ### Step 7: Turn it on (Systemd)
 We want this to run automatically when the server turns on.
