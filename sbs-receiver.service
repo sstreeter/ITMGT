@@ -1,0 +1,21 @@
+[Unit]
+Description=SBS Inventory Receiver (Gunicorn)
+After=network.target
+
+[Service]
+# Adjust these paths to match your actual installation
+User=sbsmgr
+Group=sbsmgr
+WorkingDirectory=/opt/sbs-inventory/ITMGT
+Environment="PATH=/opt/sbs-inventory/ITMGT/venv/bin"
+EnvironmentFile=/opt/sbs-inventory/ITMGT/.env
+
+# Gunicorn configuration:
+# -w 4: 4 worker processes
+# -b 0.0.0.0:443: Bind to port 443 (Requires 'setcap' on python binary)
+ExecStart=/opt/sbs-inventory/ITMGT/venv/bin/gunicorn --workers 4 --bind 0.0.0.0:443 sbs-receiver:app
+
+Restart=always
+
+[Install]
+WantedBy=multi-user.target

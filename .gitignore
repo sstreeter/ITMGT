@@ -1,0 +1,22 @@
+# Secrets
+.env
+config.json
+*.key
+*.pem
+
+# Python
+__pycache__/
+*.pyc
+venv/
+env/
+
+# PowerShell
+*.ps1.xml
+
+# System
+.DS_Store
+Thumbs.db
+
+# Database
+*.db
+*.sqlite
