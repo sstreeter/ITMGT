@@ -2,6 +2,7 @@
 import secrets
 import os
 import random
+import sys
 
 ENV_FILE = ".env"
 
@@ -25,28 +26,7 @@ def generate_memorable_key():
     key = "-".join(w.capitalize() for w in words) + f"-{number}"
     return key
 
-def main():
-    if os.path.exists(ENV_FILE):
-        print(f"Checking {ENV_FILE}...")
-        with open(ENV_FILE, "r") as f:
-            content = f.read()
-            if "SBS_API_KEY=" in content and "change-me" not in content:
-                print("A secure key appears to be set already.")
-                choice = input("Do you want to overwrite it? (y/N): ")
-                if choice.lower() != 'y':
-                    print("Aborted.")
-                    return
-
-    print("\nChoose your key style:")
-    print("1. Random Hex (e.g., 7f8e9d...) [Maximum Security]")
-    print("2. Memorable Words (e.g., Purple-Monkey-Dishwasher-42) [Easier to type]")
-    style = input("Selection [1/2]: ").strip()
-
-    if style == "2":
-        new_key = generate_memorable_key()
-    else:
-        new_key = generate_hex_key()
-    
+def save_key(new_key):
     # Read existing content or start fresh
     if os.path.exists(ENV_FILE):
         with open(ENV_FILE, "r") as f:
@@ -76,5 +56,77 @@ def main():
     print(f"Key: {new_key}")
     print("\nIMPORTANT: Copy this key to your client's config.json file!")
 
+def main():
+    if os.path.exists(ENV_FILE):
+        print(f"Checking {ENV_FILE}...")
+        with open(ENV_FILE, "r") as f:
+            content = f.read()
+            if "SBS_API_KEY=" in content and "change-me" not in content:
+                print("A secure key appears to be set already.")
+                # Force interactive check only if run interactively, otherwise assume overwrite for automation? 
+                # Actually, let's keep it safe.
+                choice = input("Do you want to overwrite it? (y/N): ")
+                if choice.lower() != 'y':
+                    print("Aborted.")
+                    return
+
+    print("\nChoose your key style:")
+    print("1. Random Hex (e.g., 7f8e9d...) [Maximum Security]")
+    print("2. Memorable Words (e.g., Purple-Monkey-Dishwasher-42) [Easier to type]")
+    style = input("Selection [1/2]: ").strip()
+    
+    key_history = []
+    
+    while True:
+        if style == "2":
+            new_key = generate_memorable_key()
+        else:
+            new_key = generate_hex_key()
+            
+        key_history.append(new_key)
+        # Limit history to 100
+        if len(key_history) > 100:
+            key_history.pop(0)
+            
+        print(f"\nGenerated Key: \033[92m{new_key}\033[0m")
+        print("Options: [y]es, [n]ext, [h]istory, [q]uit")
+        
+        while True:
+            choice = input("Choice: ").strip().lower()
+            
+            if choice == 'y':
+                save_key(new_key)
+                sys.exit(0)
+            elif choice == 'n':
+                break # Break inner loop to generate new key
+            elif choice == 'q':
+                print("Aborted.")
+                sys.exit(0)
+            elif choice == 'h':
+                if len(key_history) <= 1:
+                    print("No history yet.")
+                    continue
+                    
+                print("\n--- Key History ---")
+                for i, k in enumerate(key_history):
+                    print(f"{i+1}. {k}")
+                
+                try:
+                    idx_str = input("\nEnter number to select (or 0 to cancel): ")
+                    idx = int(idx_str)
+                    if idx > 0 and idx <= len(key_history):
+                        selected_key = key_history[idx-1]
+                        save_key(selected_key)
+                        sys.exit(0)
+                except ValueError:
+                    pass
+                print("Returning to current key...")
+                print(f"Current Key: \033[92m{new_key}\033[0m")
+                print("Options: [y]es, [n]ext, [h]istory, [q]uit")
+
 if __name__ == "__main__":
-    main()
+    try:
+        main()
+    except KeyboardInterrupt:
+        print("\nAborted.")
+        sys.exit(0)
